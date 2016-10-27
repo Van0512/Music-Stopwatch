@@ -81,10 +81,11 @@ void Date::showPeriod() {
 	int second = next.wSecond - now.wSecond;
 	if(second < 0) {
 		second += 60;
-		if(--minute < 0) {
-			minute += 60;
-			--hour;
-		}
+		--minute;
+	}
+	if(minute < 0) {
+		minute += 60;
+		--hour;
 	}
 	cout << '\t' << "[";
 	cout << hour << (hour > 1 ? " Hours " : " Hour ");
