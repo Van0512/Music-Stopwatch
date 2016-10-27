@@ -1,0 +1,157 @@
+#include <windows.h>
+#include <mmsystem.h>
+#include <iostream>
+#include <unordered_map> 
+#include <string>
+using namespace std;
+
+class Date {
+public:	
+	Date();
+	void stopwatch();	//对外接口，音乐秒表。 
+
+private:
+	void showYMD(SYSTEMTIME &now);			//显示年月日 
+	void showWeekday(SYSTEMTIME &now);		//显示星期几 
+	void showHMS(SYSTEMTIME &now); 			//显示时分秒 
+	void showCompleteTime(SYSTEMTIME &now); //显示自定义的完整的时间格式 
+	void showPeriod();				//显示一次秒表计时。 
+	SYSTEMTIME getLocalTime();		//返回此刻的时间。 
+	void playMusic(const string &mp3 = "C:/DyingInTheSun.wav");	//播放音乐 
+	void stopMusic(const string &mp3 = "C:/DyingInTheSun.wav");	//停止播放 
+	void showTotalLearningTime();	//汇总秒表计时的总时间。 
+	
+private:
+	struct TotalTime {
+		WORD hour = 0;
+		WORD minute = 0;
+		WORD second = 0;
+	}totalTime;
+	SYSTEMTIME now;
+	unordered_map<WORD, string> weekday;	//从数字映射到星期，用数组实现更高效。                       
+};
+
+Date::Date():now(getLocalTime()) {	
+	string str[] = { "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday" };
+	for(int i = 0; i < 7; ++i)
+		weekday.emplace(i, str[i]);
+}
+
+inline
+void Date::showYMD(SYSTEMTIME &now) {
+	cout << now.wYear << "-" << now.wMonth << "-" << now.wDay;
+}
+
+inline
+void Date::showWeekday(SYSTEMTIME &now) {
+	cout << weekday.at(now.wDayOfWeek);
+}
+
+inline
+void Date::showHMS(SYSTEMTIME &now) {
+	cout << now.wHour << ":" << now.wMinute << ":" << now.wSecond;
+}
+
+inline
+void Date::showCompleteTime(SYSTEMTIME &now) {
+	cout << "Today is ";
+	showYMD(now); 
+	cout << endl;
+	showWeekday(now); 
+	cout << "\t";
+	showHMS(now);
+}
+
+SYSTEMTIME Date::getLocalTime() {
+	SYSTEMTIME time;
+	GetLocalTime(&time);
+	return time;
+}
+
+void Date::showPeriod() {
+	SYSTEMTIME next(getLocalTime());
+	
+	cout << "Begin with ";
+	showHMS(now);
+	cout << endl << "End with ";
+	showHMS(next);
+	cout << endl << "Learning time: " << endl;
+	int hour = next.wHour - now.wHour;
+	int minute = next.wMinute - now.wMinute;
+	int second = next.wSecond - now.wSecond;
+	if(second < 0) {
+		second += 60;
+		if(--minute < 0) {
+			minute += 60;
+			--hour;
+		}
+	}
+	cout << '\t' << "[";
+	cout << hour << (hour > 1 ? " Hours " : " Hour ");
+	cout << minute << (minute > 1 ? " Minutes " : " Minute ");
+	cout << second << (second > 1 ? " Seconds" : " Second") << "]";
+	
+	totalTime.hour += hour;
+	totalTime.minute += minute;
+	totalTime.second += second;
+}
+
+void Date::playMusic(const string &mp3) {
+	cout << "Play " + mp3 + " to relex you. Hope you will like it."; 
+	mciSendString(("play " + mp3).c_str(), NULL, 0, NULL);
+}
+
+void Date::stopMusic(const string &mp3) {
+	mciSendString(("stop " + mp3).c_str(), NULL, 0, NULL);
+}
+
+void Date::stopwatch() {
+	char guard = 0;
+	showCompleteTime(now);
+	cout << endl;
+	while(guard != 'y' && guard != 'Y') {
+		stopMusic();
+		while(true) {
+			now = getLocalTime();
+			cout << endl << "The stopwatch starts. Input any letters to stop the stopwatch." << endl;
+			cin >> guard;
+			while(getchar() != '\n');	//读取剩余字符，防止输入多个字符影响程序执行。 
+			if(guard) {
+				showPeriod();
+				break;
+			}
+		}
+		
+		cout << endl << endl;
+		playMusic();
+		cout << endl << "Do you want to exit the stopwatch ?" << endl;
+		cout << "Input y/Y to exit this stopwatch, or any other letters to continue..." << endl;
+		cin >> guard;
+		while(getchar() != '\n'); 
+	}
+	
+	cout << endl;
+	cout << "Thanks for using this program." << endl;
+	showTotalLearningTime();
+}
+
+void Date::showTotalLearningTime() {
+	totalTime.minute += totalTime.second / 60;
+	totalTime.second %= 60;
+	totalTime.hour += totalTime.minute / 60;
+	totalTime.minute %= 60;
+	
+	cout << "The total learning time is: " << endl << '\t';
+	cout << "[" << totalTime.hour << (totalTime.hour > 1 ? " Hours " : " Hour ");
+	cout << totalTime.minute << (totalTime.minute > 1 ? " Minutes " : " Minute ");
+	cout << totalTime.second << (totalTime.second > 1 ? " Seconds" : " Second") << "]";
+}
+
+
+int main(void) {
+	Date date;
+	date.stopwatch();
+	
+	system("pause"); 
+	return 0;
+}
